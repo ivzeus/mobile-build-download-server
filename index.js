@@ -3,6 +3,8 @@ const bodyParser = require('body-parser')
 const cookieParser = require('cookie-parser')
 const logger = require('morgan')
 const path = require('path')
+const fs = require('fs')
+const serveIndex = require('serve-index')
 const passport = require('passport')
 var BasicStrategy = require('passport-http').BasicStrategy
 
@@ -17,10 +19,7 @@ app.use(cookieParser())
 app.use(express.static(path.join(__dirname, 'public')))
 app.use(passport.initialize())
 
-app.use('/builds', passport.authenticate('basic', { session: false }))
-app.use('/builds', express.static(path.join(__dirname, 'builds')))
-
-// app.set('views', path.join(__dirname, 'views'));
+app.set('views', path.join(__dirname, 'views'))
 app.set('view engine', 'ejs')
 
 //------------------------------------------------------//
@@ -43,8 +42,6 @@ function isLoggedIn(req, res, next) {
 
 passport.use(
   new BasicStrategy(function(username, password, done) {
-    console.log(process.env.USERNAME, username)
-    console.log(password, process.env.PASSWORD)
     if (
       username === process.env.USERNAME &&
       password === process.env.PASSWORD
@@ -62,17 +59,12 @@ app.get('/', (req, res) => {
   res.send('ok')
 })
 
-app.get('/builds', passport.authenticate('basic', { session: false }), function(
-  req,
-  res
-) {
-  let json = {
-    title: 'App Installer',
-    login: process.env.USERNAME,
-    password: process.env.PASSWORD,
-  }
-  res.render('builds', json)
-})
+app.use(
+  '/builds',
+  passport.authenticate('basic', { session: false }),
+  express.static(path.join(__dirname, 'builds')),
+  serveIndex('builds', { icons: true, view: 'details' })
+)
 
 //------------------------------------------------------//
 // handling errors
