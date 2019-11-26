@@ -6,6 +6,8 @@ const path = require('path')
 const fs = require('fs')
 const serveIndex = require('serve-index')
 const passport = require('passport')
+const http = require('http')
+const https = require('https')
 var BasicStrategy = require('passport-http').BasicStrategy
 
 //------------------------------------------------------//
@@ -87,5 +89,23 @@ app.use(function(err, req, res, next) {
 
 //------------------------------------------------------//
 // start server
-console.log('Server run at localhost:3000')
-app.listen(3000)
+
+const server = http.createServer(app)
+// use this line if you want to start https server
+// self-signed can be generated using: openssl req -nodes -new -x509 -keyout server.key -out server.cert
+// const server = https.createServer(
+//   {
+//     key: fs.readFileSync('server.key'),
+//     cert: fs.readFileSync('server.cert'),
+//   },
+//   app
+// )
+server.listen(process.env.PORT)
+server.on('error', err => {
+  console.log('Error: ', err)
+})
+server.on('listening', () => {
+  const addr = server.address()
+  console.log(`server listening at localhost:${addr.port}`)
+})
+// app.listen(3000)
