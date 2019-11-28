@@ -16,11 +16,14 @@
     "ejs": "^3.0.1",
     "express": "^4.17.1",
     "express-jwt": "^5.3.1",
+    "ipa-extract-info": "^1.2.5",
     "morgan": "^1.9.1",
     "passport": "^0.4.0",
     "passport-http": "^0.3.0",
     "path": "^0.12.7",
-    "serve-index": "^1.9.1"
+    "react-devtools": "^3.6.3",
+    "serve-index": "^1.9.1",
+    "xmlbuilder": "^13.0.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.1"
