@@ -1,4 +1,6 @@
 .env
+builds/
+tmp/
 node_modules
 web/node_modules
 server.cert

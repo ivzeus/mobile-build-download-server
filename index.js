@@ -8,6 +8,10 @@ const serveIndex = require('serve-index')
 const passport = require('passport')
 const http = require('http')
 const https = require('https')
+const multer = require('multer')
+const dateFormat = require('dateformat')
+const util = require('util')
+const exec = util.promisify(require('child_process').exec)
 var BasicStrategy = require('passport-http').BasicStrategy
 
 //------------------------------------------------------//
@@ -68,6 +72,74 @@ app.use(
   serveIndex('builds', { icons: true, view: 'details' })
 )
 
+function getDateTime() {
+  let d = new Date()
+  console.log('getDateTime', d)
+  return dateFormat(d, 'yyyy-mm-dd-hh-mm')
+}
+
+// upload builds
+const upload = multer({ dest: 'tmp/' })
+app.post(
+  '/uploads',
+  upload.fields([
+    { name: 'build', maxCount: 1 },
+    { name: 'logo', maxCount: 1 },
+  ]),
+  async function(req, res, next) {
+    // {
+    //   type: 'ipa/apk',
+    //   name: 'name',
+    //   version: 'buildVersion-(buildCode)',
+    //   desc: 'description',
+    // }
+    const {
+      files,
+      body: { type, name, version, desc },
+    } = req
+
+    const buildPath = `${name}/${version}/${getDateTime()}`
+    const dest = path.join(__dirname, `builds/${buildPath}`)
+
+    try {
+      // copy build to dest dir
+      fs.mkdirSync(dest, { recursive: true })
+      fs.renameSync(files['build'][0].path, `${dest}/build.${type}`)
+      fs.renameSync(files['logo'][0].path, `${dest}/logo.png`)
+
+      //
+      const baseUrl = encodeURI(
+        `${process.env.EXTERNAL_IP}:${process.env.PORT}/builds/${buildPath}`
+      )
+      const appUrl = `${baseUrl}/build.${type}`
+      const iconUrl = `${baseUrl}/logo.png`
+
+      if (type === 'ipa') {
+        // generate manifest
+        await exec(
+          `node tools/manifest_generator.js "${dest}/build.${type}" "${appUrl}" "${iconUrl}" > "${dest}/manifest.plist"`
+        )
+
+        // generate html
+        const manifestUrl = `itms-services://?action=download-manifest&url=${baseUrl}/manifest.plist`
+        await exec(
+          `node tools/html_generator.js "${name}" "${manifestUrl}" "${iconUrl}" "${version}" "${desc}" > "${dest}/index.html"`
+        )
+      } else {
+        // generate html
+        await exec(
+          `node tools/html_generator.js "${name}" "${appUrl}" "${iconUrl}" "${version}" "${desc}" > "${dest}/index.html"`
+        )
+      }
+
+      res.redirect('/')
+    } catch (err) {
+      console.log(err)
+      res.redirect('/')
+    }
+  }
+)
+
 //------------------------------------------------------//
 // handling errors
 app.use(function(req, res, next) {
@@ -90,22 +162,23 @@ app.use(function(err, req, res, next) {
 //------------------------------------------------------//
 // start server
 
-const server = http.createServer(app)
+// const server = http.createServer(app)
 // use this line if you want to start https server
 // self-signed can be generated using: openssl req -nodes -new -x509 -keyout server.key -out server.cert
-// const server = https.createServer(
-//   {
-//     key: fs.readFileSync('server.key'),
-//     cert: fs.readFileSync('server.cert'),
-//   },
-//   app
-// )
+const server = https.createServer(
+  {
+    key: fs.readFileSync('server.key'),
+    cert: fs.readFileSync('server.cert'),
+  },
+  app
+)
 server.listen(process.env.PORT)
 server.on('error', err => {
   console.log('Error: ', err)
 })
 server.on('listening', () => {
   const addr = server.address()
+  console.log(addr)
   console.log(`server listening at localhost:${addr.port}`)
 })
 // app.listen(3000)
