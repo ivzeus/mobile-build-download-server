@@ -103,7 +103,11 @@ app.post(
 
     try {
       // copy build to dest dir
+      // for Node 10+
       fs.mkdirSync(dest, { recursive: true })
+      // if you are using Node 8 then use shelljs module
+      // const shell = require('shelljs')
+      // shell.mkdir('-p', dest)
       fs.renameSync(files['build'][0].path, `${dest}/build.${type}`)
       fs.renameSync(files['logo'][0].path, `${dest}/logo.png`)
 
